@@ -1943,6 +1943,9 @@ footer > span:last-child {
   grid-template-columns: 1fr 1fr;
   gap: 14px;
 }
+.form-columns > * {
+  min-width: 0;
+}
 .editor .note {
   margin-top: -10px;
 }
@@ -3155,15 +3158,18 @@ footer > span:last-child {
   .editor .form-columns {
     gap: 12px;
   }
+  .editor .event-dates {
+    grid-template-columns: 1fr;
+  }
   .editor input[type=datetime-local] {
-    font-size: 12px;
+    font-size: 16px;
     min-width: 0;
-    padding: 12px 7px;
+    padding: 12px 11px;
     width: 100%;
     max-width: 100%;
   }
   .editor input[type=date] {
-    font-size: 13px;
+    font-size: 16px;
   }
   .form-actions {
     padding-top: 21px;
