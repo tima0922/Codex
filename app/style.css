@@ -2509,9 +2509,6 @@ footer > span:last-child {
     border-radius: 12px;
     background: #c6c4ff06;
   }
-  .header-right .icon-button:first-of-type {
-    display: none;
-  }
   .page-content {
     padding: 17px 20px calc(130px + env(safe-area-inset-bottom));
     max-width: 620px;
