@@ -1,4 +1,4 @@
-import { HttpError, defaults, localDate, addDays, clock, validateInitData, constantEqual, validateRecord, validateSettings, notificationPlan, dayText, quietNow } from './core.js';
+import { HttpError, defaults, localDate, addDays, clock, validateInitData, constantEqual, validateRecord, validateSettings, notificationPlan, dayText, quietNow, applyStudyDeparture } from './core.js';
 
 const securityHeaders = {
   'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer',
@@ -36,7 +36,8 @@ export async function snapshot(env, day = localDate()) {
     all('tima_money?order=date.desc,id'),
     db(env, 'tima_settings?id=eq.1&select=value')
   ]);
-  return { events, tasks, money, settings: { ...defaults, ...settings[0]?.value }, day, timezone: 'Asia/Tashkent' };
+  const preferences = { ...defaults, ...settings[0]?.value };
+  return { events: applyStudyDeparture(events, preferences.study_leave_time), tasks, money, settings: preferences, day, timezone: 'Asia/Tashkent' };
 }
 const openButton = env => ({ inline_keyboard: [[{ text: 'Открыть Tima Assistant ↗', web_app: { url: env.APP_URL } }]] });
 const send = (env, text, reply_markup = openButton(env)) => telegram(env, 'sendMessage', { chat_id: env.OWNER_TELEGRAM_ID, text, reply_markup });

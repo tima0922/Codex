@@ -95,7 +95,7 @@ export function Countdown({target,active}:{target:number;active:boolean}) {
  useEffect(()=>{const id=setInterval(()=>{if(!document.hidden)setNow(Date.now())},1000);return()=>clearInterval(id)},[]);
  const seconds=Math.max(0,Math.floor((target-now)/1000));
  const values=[Math.floor(seconds/3600),Math.floor(seconds/60)%60,seconds%60];
- return <div className="countdown-wrap"><span>{active?'До конца по графику':'До начала'}</span><div className="countdown" aria-label={`${values[0]} часов ${values[1]} минут ${values[2]} секунд`}>{values.map((v,i)=><React.Fragment key={i}>{i>0&&<i>:</i>}<span><b key={v}>{String(v).padStart(2,'0')}</b><small>{['час','мин','сек'][i]}</small></span></React.Fragment>)}</div></div>;
+ return <div className="countdown-wrap"><span>{active?'До окончания':'До начала'}</span><div className="countdown" aria-label={`${values[0]} часов ${values[1]} минут ${values[2]} секунд`}>{values.map((v,i)=><React.Fragment key={i}>{i>0&&<i>:</i>}<span><b key={v}>{String(v).padStart(2,'0')}</b><small>{['час','мин','сек'][i]}</small></span></React.Fragment>)}</div></div>;
 }
 
 export function DayRail({today,selected,onSelect,events}:{today:string;selected:string;onSelect:(d:string)=>void;events:any[]}) {

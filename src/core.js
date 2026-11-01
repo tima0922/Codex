@@ -1,10 +1,24 @@
 export class HttpError extends Error { constructor(status, message) { super(message); this.status = status; } }
-export const defaults = { enabled: true, lessons: true, breaks: true, shifts: true, tasks: true, bills: true, morning: false, evening: false, lesson_minutes: 15, shift_minutes: 60, task_minutes: 15, quiet: false, quiet_start: '00:00', quiet_end: '07:00' };
+export const defaults = { enabled: true, lessons: true, breaks: true, shifts: true, tasks: true, bills: true, morning: false, evening: false, lesson_minutes: 15, shift_minutes: 60, task_minutes: 15, quiet: false, quiet_start: '00:00', quiet_end: '07:00', study_leave_time: '07:00' };
 export const localDate = (date = new Date()) => new Date(+date + 5 * 3600000).toISOString().slice(0, 10);
 export const localTime = (date = new Date()) => new Date(+date + 5 * 3600000).toISOString().slice(11, 16);
 export const addDays = (date, n) => new Date(Date.parse(date + 'T12:00:00Z') + n * 86400000).toISOString().slice(0, 10);
 export const clock = iso => new Intl.DateTimeFormat('ru', { timeZone: 'Asia/Tashkent', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso));
 export const stamp = (date, time) => Date.parse(`${date}T${time}:00+05:00`);
+export function applyStudyDeparture(events, leaveTime = '07:00') {
+  const studyDays = new Set(events.filter(e => e.kind === 'lesson').map(e => localDate(new Date(e.starts_at))));
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(leaveTime)) return events;
+  return events.map(e => {
+    if (e.kind !== 'shift') return e;
+    const official = e.official_ends_at || e.ends_at;
+    const { official_ends_at: _oldOfficial, ...base } = e;
+    base.ends_at = official;
+    const endDay = localDate(new Date(official));
+    const leave = stamp(endDay, leaveTime);
+    if (!studyDays.has(endDay) || localDate(new Date(e.starts_at)) === endDay || leave <= Date.parse(e.starts_at) || leave >= Date.parse(official)) return base;
+    return {...base, official_ends_at: official, ends_at: new Date(leave).toISOString()};
+  });
+}
 export const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export function constantEqual(a, b) { if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false; let d = 0; for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i); return d === 0; }
 export async function hmac(key, data) {

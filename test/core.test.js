@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { hmac, hex, validateInitData, notificationPlan, localDate, localTime, addDays, validateRecord, validateSettings, quietNow, defaults, dayText } from '../src/core.js';
+import { hmac, hex, validateInitData, notificationPlan, localDate, localTime, addDays, validateRecord, validateSettings, quietNow, defaults, dayText, applyStudyDeparture } from '../src/core.js';
 import worker from '../src/index.js';
 
 const env = { BOT_TOKEN: 'test:token', OWNER_TELEGRAM_ID: '1234', WEBHOOK_SECRET: 'test_secret' };
@@ -24,6 +24,18 @@ test('Tashkent dates and night-shift formatting cross UTC midnight correctly',()
  assert.equal(localTime(new Date('2026-11-01T20:00:00Z')),'01:00');
  assert.equal(addDays('2026-11-30',1),'2026-12-01');
  assert.match(dayText([{kind:'shift',title:'Test',starts_at:'2026-11-01T21:00:00+05:00',ends_at:'2026-11-02T09:00:00+05:00'}],'2026-11-01'),/\(\+1 день\)/);
+});
+test('early departure changes only overnight shifts ending on a confirmed study date',()=>{
+ const shift={id:'s',kind:'shift',title:'Night',starts_at:'2026-11-01T21:00:00+05:00',ends_at:'2026-11-02T09:00:00+05:00'};
+ const lesson={id:'l',kind:'lesson',title:'Class',starts_at:'2026-11-02T08:00:00+05:00',ends_at:'2026-11-02T09:20:00+05:00'};
+ const rows=applyStudyDeparture([shift,lesson],'07:00');
+ assert.equal(rows[0].ends_at,'2026-11-02T02:00:00.000Z');assert.equal(rows[0].official_ends_at,shift.ends_at);
+ assert.equal(shift.ends_at,'2026-11-02T09:00:00+05:00');
+ assert.equal(applyStudyDeparture([shift],'07:00')[0].ends_at,shift.ends_at);
+ assert.deepEqual(applyStudyDeparture(rows,'07:00'),rows);
+ assert.equal(applyStudyDeparture(rows,'07:30')[0].ends_at,'2026-11-02T02:30:00.000Z');
+ assert.equal(applyStudyDeparture(rows,'10:00')[0].ends_at,shift.ends_at);
+ assert.match(dayText(rows,'2026-11-01'),/07:00/);
 });
 const events=[{id:'1',kind:'lesson',title:'Первая',starts_at:'2026-11-02T08:00:00+05:00',ends_at:'2026-11-02T09:20:00+05:00',room:'101'}, {id:'2',kind:'lesson',title:'Следующая',starts_at:'2026-11-02T09:30:00+05:00',ends_at:'2026-11-02T10:50:00+05:00',room:'lab 07',teacher:'Учитель'}, {id:'3',kind:'shift',title:'Смена',starts_at:'2026-11-02T21:00:00+05:00',ends_at:'2026-11-03T09:00:00+05:00'}];
 const plan=(at,s={},ts=[],money=[])=>notificationPlan(events,ts,money,s,new Date(at+'+05:00'));
