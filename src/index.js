@@ -1,3 +1,4 @@
+import { routeBot } from './bot-ui.js';
 import { HttpError, defaults, localDate, addDays, clock, validateInitData, constantEqual, validateRecord, validateSettings, notificationPlan, dayText, quietNow, applyStudyDeparture } from './core.js';
 
 const securityHeaders = {
@@ -19,7 +20,7 @@ export async function db(env, path, method = 'GET', body, prefer = 'return=repre
 }
 export async function telegram(env, method, data) {
   const r = await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/${method}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data), signal: AbortSignal.timeout(12000) });
-  const result = await r.json(); if (!result.ok) throw new HttpError(502, 'Telegram временно не ответил'); return result.result;
+  const result = await r.json(); if (!result.ok && result.description?.includes('message is not modified')) return null; if (!result.ok) throw new HttpError(502, 'Telegram временно не ответил'); return result.result;
 }
 export async function snapshot(env, day = localDate()) {
   const all = async path => {
@@ -78,31 +79,7 @@ async function handleUpdate(update, env) {
   const key = `update:${update.update_id}`;
   const lease = await db(env, 'rpc/tima_claim', 'POST', { p_key: key, p_payload: '', p_expires: new Date(Date.now() + 86400000).toISOString() });
   if (!lease) { const row = (await db(env, `tima_deliveries?key=eq.${key}&select=sent_at`))[0]; if (row?.sent_at) return; throw new HttpError(503, 'Повторить позже'); }
-  if (cb) {
-    const match = /^done:([a-f0-9-]+)$/.exec(cb.data || '');
-    if (match && uuid.test(match[1])) await db(env, `tima_tasks?id=eq.${match[1]}`, 'PATCH', { done: true });
-    await telegram(env, 'answerCallbackQuery', { callback_query_id: cb.id, text: match ? 'Готово ✓' : 'Открой приложение' });
-  } else {
-    const text = String(m.text || '').trim(); const [cmd] = text.split(/\s/); const command = cmd.split('@')[0]; const today = localDate();
-    if (command === '/start' || command === '/help') await send(env, 'Привет, Тима 👋\n\nТвой личный помощник: пары, смены, задачи и деньги — в одном месте.\n\n/today — сегодня\n/tomorrow — завтра\n/week — ближайшие 7 дней\n/work — смены\n/tasks — задачи\n/add текст — добавить задачу\n/settings — настройки\n\nОткрывай приложение кнопкой ниже.');
-    else if (command === '/add') {
-      const title = text.slice(cmd.length).trim(); if (!title || title.length > 200) await send(env, 'Напиши /add и текст задачи до 200 символов');
-      else { await db(env, 'tima_tasks?on_conflict=id', 'POST', { id: await updateUuid(update.update_id), title }, 'resolution=ignore-duplicates,return=representation'); await send(env, `📌 Добавил: ${title}`); }
-    } else {
-      const state = await snapshot(env);
-      if (command === '/today' || command === '/tomorrow') await send(env, dayText(state.events, command === '/today' ? today : addDays(today, 1)));
-      else if (command === '/week') for (let i = 0; i < 7; i++) await send(env, dayText(state.events, addDays(today, i)));
-      else if (command === '/work') {
-        const shifts = state.events.filter(e => e.kind === 'shift' && Date.parse(e.ends_at) > Date.now()).slice(0, 8);
-        await send(env, '🌙 Ближайшие смены\n\n' + (shifts.map(e => `${localDate(new Date(e.starts_at)).split('-').reverse().join('.')} · ${clock(e.starts_at)} → ${clock(e.ends_at)} (+1 день)`).join('\n') || 'Смен пока нет.'));
-      } else if (command === '/tasks') {
-        const tasks = state.tasks.filter(t => !t.done).slice(0, 8);
-        if (!tasks.length) await send(env, 'Все задачи закрыты. Можно выдохнуть 😎');
-        else for (const t of tasks) await send(env, `📌 ${t.title}${t.due_at ? '\nСрок: ' + localDate(new Date(t.due_at)) + ' ' + clock(t.due_at) : ''}`, { inline_keyboard: [[{ text: 'Выполнено ✓', callback_data: `done:${t.id}` }]] });
-      } else if (command === '/settings') await send(env, `⚙️ Уведомления: ${state.settings.enabled ? 'включены' : 'выключены'}\nИзменить настройки можно в приложении.`);
-      else await send(env, 'Задачу можно добавить так:\n/add Сделать лабораторную\n\nОстальное — в приложении 👇');
-    }
-  }
+  await routeBot(update, env, { db, telegram, snapshot, updateUuid });
   await db(env, `tima_deliveries?key=eq.${key}&lease=eq.${lease}`, 'PATCH', { sent_at: new Date().toISOString() });
 }
 async function updateUuid(id) { const bytes = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('telegram-task:' + id))); const h = Array.from(bytes.slice(0, 16), b => b.toString(16).padStart(2, '0')).join(''); return `${h.slice(0,8)}-${h.slice(8,12)}-4${h.slice(13,16)}-8${h.slice(17,20)}-${h.slice(20)}`; }
