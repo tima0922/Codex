@@ -25,4 +25,6 @@ for(const item of sizes)console.log(`${item.path}: ${(item.raw/1024).toFixed(1)}
 console.log(`CSS: ${(Buffer.byteLength(css)/1024).toFixed(1)} KB / ${(gzipSync(css).length/1024).toFixed(1)} KB gzip`);
 
 // Temporary visual review viewport; removed after mobile verification.
-await copyFile('app/mobile-review.html','public/mobile-review.html');
+const escapedHtml=html.replaceAll('&','&amp;').replaceAll('\"','&quot;');
+await writeFile('public/mobile-review.html',(await readFile('app/mobile-review.html','utf8')).replace('__CLIENT_HTML__',escapedHtml));
+for(const name of ['mobile-review.css','mobile-review.js'])await copyFile('app/'+name,'public/'+name);
