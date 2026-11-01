@@ -1,5 +1,13 @@
 {
   "name": "codex",
   "main": "src/index.js",
-  "compatibility_date": "2026-11-01"
+  "compatibility_date": "2026-11-01",
+  "build": { "command": "npm run build" },
+  "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": true },
+  "triggers": { "crons": ["* * * * *"] },
+  "vars": {
+    "APP_URL": "https://codex.bagirovtimur09.workers.dev",
+    "SUPABASE_URL": "https://dnxytuqhbhoyfwqydnsn.supabase.co"
+  },
+  "observability": { "enabled": true }
 }
