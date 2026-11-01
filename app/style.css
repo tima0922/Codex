@@ -1744,6 +1744,7 @@ select option {
   margin-top: 5px;
 }
 .time-inputs label {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 7px;
