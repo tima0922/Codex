@@ -3248,6 +3248,7 @@ footer > span:last-child {
   }
 }
 @media (max-width: 374px) {
+  .editor .form-columns {grid-template-columns:1fr;}
   header {
     padding-left: 16px;
     padding-right: 16px;
